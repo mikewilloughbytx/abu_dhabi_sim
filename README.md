@@ -23,6 +23,7 @@ All audio is pre-rendered. The site contains no API keys; keys live only in Netl
 | `RESULTS_FROM` | Sender, e.g. `Abu Dhabi Race Control <sim@yourdomain.com>` (must be on the verified domain) |
 | `RUN_SECRET` | Any long random string (signs run tokens) |
 | `ADMIN_PASSWORD` | Password for `/results.html` |
+| `REPLY_TO` | Optional: where replies to the results email go (default mike@mike-willoughby.com) |
 | `FACILITATOR_EMAIL` | Optional: also BCC every results email here |
 | `MIN_RUN_SECONDS` | Optional: shortest run that gets an email (default 240) |
 | `MAX_EMAILS_PER_DAY` | Optional: daily send cap (default 95, under Resend's free 100 a day) |

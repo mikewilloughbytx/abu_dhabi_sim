@@ -5,6 +5,7 @@ import { describeRun, resultsEmail } from "./lib/email.mjs";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_RUN_MS = 4 * 60 * 60 * 1000;
 const PER_EMAIL_PER_HOUR = 3;
+const REPLY_TO = process.env.REPLY_TO || "mike@mike-willoughby.com"; // replies to the results email reach the facilitator
 const PER_DAY = Number(process.env.MAX_EMAILS_PER_DAY || 95); // Resend's free tier allows 100 a day
 
 export default async req => {
@@ -48,7 +49,7 @@ export default async req => {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: `Bearer ${env("RESEND_API_KEY")}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: env("RESULTS_FROM"), to: [email], subject: msg.subject, html: msg.html, text: msg.text,
+      body: JSON.stringify({ from: env("RESULTS_FROM"), to: [email], reply_to: REPLY_TO, subject: msg.subject, html: msg.html, text: msg.text,
         ...(process.env.FACILITATOR_EMAIL ? { bcc: [process.env.FACILITATOR_EMAIL] } : {}) }),
     });
     let status = "sent";
