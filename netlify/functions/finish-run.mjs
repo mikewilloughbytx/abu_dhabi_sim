@@ -51,8 +51,15 @@ export default async req => {
       body: JSON.stringify({ from: env("RESULTS_FROM"), to: [email], subject: msg.subject, html: msg.html, text: msg.text,
         ...(process.env.FACILITATOR_EMAIL ? { bcc: [process.env.FACILITATOR_EMAIL] } : {}) }),
     });
-    const status = res.ok ? "sent" : `failed_${res.status}`;
-    if (!res.ok) console.error("Resend error", res.status, await res.text());
+    let status = "sent";
+    if (!res.ok) {
+      // Keep Resend's own explanation (e.g. an unverified domain) so the results page shows why.
+      const detail = await res.text();
+      console.error("Resend error", res.status, detail);
+      let why = detail;
+      try { why = JSON.parse(detail).message || detail; } catch {}
+      status = `failed_${res.status}: ${String(why).slice(0, 200)}`;
+    }
     await supabase(`runs?id=eq.${row.id}`, { method: "PATCH", body: { email_status: status } });
     return res.ok ? json(200, { ok: true }) : json(502, { message: "Your run was saved, but the email didn't go through. Use Download or Copy to keep your results." });
   } catch (e) {
