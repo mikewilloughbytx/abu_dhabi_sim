@@ -20,7 +20,7 @@ export default async req => {
     resultsFrom: process.env.RESULTS_FROM ? process.env.RESULTS_FROM.replace(/^.*@/, "@") : null,
   };
   try { await supabase("runs?select=id&limit=1"); out.supabase = "ok: runs table reachable"; }
-  catch (e) { out.supabase = String(e.message).replace(key, "[key]").slice(0, 400); }
+  catch (e) { out.supabase = (key ? String(e.message).split(key).join("[key]") : String(e.message)).slice(0, 400); }
   return json(200, out);
 };
 
