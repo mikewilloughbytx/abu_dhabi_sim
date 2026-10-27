@@ -15,7 +15,7 @@
     <form class="signup" id="login">
       <label class="field" for="pw">Password<input id="pw" type="password" autocomplete="current-password" required></label>
       <p class="err" id="err" role="alert"></p>
-      <div class="row"><button class="primary" type="submit">Show runs</button><button type="button" id="csv" hidden>Download CSV</button></div>
+      <div class="row"><button class="primary" type="submit">Show runs</button><button type="button" id="csv" hidden>Download CSV</button><button type="button" id="health">Check setup</button></div>
     </form>
     <p class="note" id="count"></p>
     <div class="log" id="log"></div>
@@ -45,6 +45,14 @@ function draw() {
   }
   $("#log").replaceChildren(t);
 }
+$("#health").addEventListener("click", async () => {
+  $("#err").textContent = "";
+  const r = await fetch("/api/health", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: $("#pw").value }) });
+  const b = await r.json().catch(() => ({}));
+  if (!r.ok) { $("#err").textContent = b.message || "The check couldn't run."; return; }
+  const pre = document.createElement("pre"); pre.style.whiteSpace = "pre-wrap"; pre.textContent = JSON.stringify(b, null, 2);
+  $("#log").replaceChildren(pre); $("#count").textContent = "Setup check (no secrets are shown):";
+});
 $("#csv").addEventListener("click", () => {
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [["created_at", "name", "email", "first_call", "team_calls", "champion", "run_seconds", "email_status"].join(",")]

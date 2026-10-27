@@ -15,6 +15,10 @@ create table if not exists public.runs (
 );
 create index if not exists runs_email_created on public.runs (email, created_at);
 
+-- Projects created with "automatically expose new tables" off need explicit grants for the server key.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.runs to service_role;
+
 -- Row level security on with no policies: only the server's service key can read or write.
 alter table public.runs enable row level security;
 

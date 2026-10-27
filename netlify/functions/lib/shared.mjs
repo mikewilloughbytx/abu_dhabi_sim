@@ -30,9 +30,10 @@ export function readToken(token) {
 
 export async function supabase(path, { method = "GET", body, headers = {} } = {}) {
   const key = env("SUPABASE_SERVICE_KEY");
-  const res = await fetch(`${env("SUPABASE_URL")}/rest/v1/${path}`, {
+  const res = await fetch(`${env("SUPABASE_URL").trim().replace(/\/+$/, "")}/rest/v1/${path}`, {
     method,
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", ...headers },
+    // Legacy service_role keys are JWTs and also go in Authorization; newer sb_secret_ keys go in apikey only.
+    headers: { apikey: key, ...(key.startsWith("eyJ") ? { authorization: `Bearer ${key}` } : {}), "content-type": "application/json", ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Supabase ${method} ${path.split("?")[0]} failed: ${res.status} ${await res.text()}`);
