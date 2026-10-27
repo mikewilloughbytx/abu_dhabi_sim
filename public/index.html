@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abu Dhabi 2021 Race Control</title>
+<meta name="description" content="A decision sim of the final laps of the 2021 Abu Dhabi Grand Prix. You decide what the race director does.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Yas Marina Circuit · 12 December 2021 · Decision sim</span>
+    <h1>Abu Dhabi 2021 Race Control</h1>
+    <div class="laps" id="laps" aria-label="Lap progress"></div>
+  </header>
+  <section class="card" id="stage" aria-live="polite"></section>
+  <footer><a href="privacy.html">Privacy notice</a></footer>
+</div>
+<audio id="audio" preload="auto"></audio>
+
+<script>
+const A = n => `audio/${n}.mp3`;
+const STAGES = {
+  intro:   { label: "Facilitator intro", laps: null },
+  leadin:  { label: "Laps 50 to 53", laps: [50, 53] },
+  d1:      { label: "Decision 1", laps: [53, 53] },
+  branch:  { label: "Race control's call", laps: [53, 55] },
+  d2:      { label: "Decision 2", laps: [55, 55] },
+  ending:  { label: "The finish", laps: [56, 58] },
+  debrief: { label: "Debrief", laps: [59, 59] },
+};
+const $ = s => document.querySelector(s);
+const audio = $("#audio"), stageEl = $("#stage");
+const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
+  for (const k of kids) e.append(k); return e; };
+const fmt = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00";
+
+let DATA = null, D1 = [], D2 = [], OUTCOME = {};
+let state = { stage: "welcome", d1: null, d2: null };
+let player = { name: "", email: "", token: null };
+let mail = { status: "idle", message: "" };
+
+function drawLaps() {
+  const box = $("#laps"); box.textContent = "";
+  const st = STAGES[state.stage]; const r = st && st.laps;
+  for (let l = 50; l <= 58; l++) {
+    let cls = "lap";
+    if (r) { if (l < r[0] || state.stage === "debrief") cls += " past"; else if (l <= r[1]) cls += " now"; }
+    if (l === 53) cls += " crash";
+    box.append(el("div", { class: cls, title: l === 53 ? "Lap 53: Latifi crash" : `Lap ${l}` }, `L${l}`));
+  }
+}
+
+function playerUI(onEnd) {
+  const bar = el("i"), cur = el("span", {}, "0:00"), tot = el("span", {}, "0:00");
+  const pause = el("button", { type: "button", onclick: () => audio.paused ? audio.play() : audio.pause() }, "Pause");
+  const replay = el("button", { type: "button", onclick: () => { audio.currentTime = 0; audio.play(); } }, "Restart segment");
+  audio.ontimeupdate = () => { cur.textContent = fmt(audio.currentTime); tot.textContent = fmt(audio.duration); bar.style.width = `${100 * audio.currentTime / (audio.duration || 1)}%`; };
+  audio.onplay = () => pause.textContent = "Pause";
+  audio.onpause = () => pause.textContent = "Resume";
+  return el("div", { class: "player" }, el("div", { class: "bar" }, bar), el("div", { class: "time" }, cur, tot), el("div", { class: "row" }, pause, replay));
+}
+
+function play(name, onEnd) { audio.onended = onEnd; audio.src = A(name); audio.currentTime = 0; audio.play().catch(() => {}); }
+
+function welcome() {
+  const err = el("p", { class: "err", role: "alert" });
+  const form = el("form", { class: "signup", novalidate: "" },
+    el("label", { class: "field", for: "name" }, "First name", el("input", { id: "name", type: "text", autocomplete: "given-name", maxlength: "60", required: "" })),
+    el("label", { class: "field", for: "email" }, "Email", el("input", { id: "email", type: "email", autocomplete: "email", maxlength: "200", required: "" })),
+    el("div", { class: "hp", "aria-hidden": "true" }, el("label", { for: "website" }, "Website"), el("input", { id: "website", type: "text", tabindex: "-1", autocomplete: "off" })),
+    el("label", { class: "consent", for: "consent" }, el("input", { id: "consent", type: "checkbox" }),
+      el("span", {}, "Email me my results, and share my name, email and choices with the course facilitator. See the ", el("a", { href: "privacy.html", target: "_blank" }, "privacy notice"), ".")),
+    err,
+    el("div", { class: "row" }, el("button", { class: "primary", type: "submit", id: "go" }, "Start the sim")));
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const name = $("#name").value.trim(), email = $("#email").value.trim();
+    if (!name) return err.textContent = "Enter your first name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err.textContent = "Enter a valid email address, such as name@college.edu.";
+    if (!$("#consent").checked) return err.textContent = "Tick the box to agree, so we can email your results.";
+    player = { name, email, token: null, hp: $("#website").value };
+    // Start the audio inside the click so browsers allow it; the run token is fetched alongside.
+    go("intro");
+    try {
+      const r = await fetch("/api/start-run", { method: "POST" });
+      if (r.ok) player.token = (await r.json()).token;
+    } catch {}
+  });
+  stageEl.append(
+    el("div", { class: "status" }, el("span", { class: "chip" }, "Pre-race")),
+    el("h2", {}, "You are in race control"),
+    el("p", {}, "You'll hear the final laps of the 2021 Abu Dhabi Grand Prix as they happen. Twice, the race will stop and you'll decide what Phillip, the race director, does next. Your choices decide how the championship ends."),
+    el("p", { class: "note" }, "About ten minutes with sound on. Headphones help. Your results are emailed to you when you finish."),
+    form);
+}
+
+function render() {
+  drawLaps(); stageEl.textContent = "";
+  const s = state.stage;
+  if (s === "welcome") return welcome();
+  if (s === "intro" || s === "leadin" || s === "branch" || s === "ending") {
+    const next = { intro: "leadin", leadin: "d1", branch: "d2", ending: "debrief" }[s];
+    const heading = { intro: "Setting the scene", leadin: "Lap 50: the race so far", branch: D1.find(o => o.id === state.d1)?.title, ending: "The final laps" }[s];
+    const done = () => go(next);
+    stageEl.append(el("div", { class: "status" }, el("span", { class: "chip live" }, "On air"), el("span", { class: "chip" }, STAGES[s].label)),
+      el("h2", {}, heading || ""), playerUI(done));
+    play(s === "branch" ? state.d1 : s === "ending" ? endingId() : s, done);
+    return;
+  }
+  if (s === "d1" || s === "d2") {
+    const opts = s === "d1" ? D1 : D2;
+    const lead = s === "d1"
+      ? "A damaged car sits against the barrier with debris on the track. Five laps remain. The championship leaders are separated by about 11 seconds, with five lapped cars between them."
+      : "Both team principals are still on the line, and more calls are coming. In 2021, team principals could speak directly to the race director during a race, and that tradition was long-standing.";
+    stageEl.append(el("div", { class: "status" }, el("span", { class: "chip decide" }, STAGES[s].label), el("span", { class: "chip" }, s === "d1" ? "Lap 53" : "Lap 55")),
+      el("p", {}, lead), el("p", { class: "question" }, "What should Phillip do?"));
+    const list = el("div", { class: "opts" });
+    for (const o of opts) list.append(el("button", { class: "opt", type: "button", onclick: () => choose(s, o.id) },
+      el("span", { class: "key" }, o.key), el("span", {}, el("b", {}, o.title), o.text)));
+    stageEl.append(list, el("p", { class: "note" }, "The facilitator reads the options aloud. You can choose at any time."), playerUI(() => {}));
+    play(s === "d1" ? "decision1" : "decision2", () => {});
+    return;
+  }
+  if (s === "debrief") {
+    const [champ, summary] = OUTCOME[endingId()];
+    const o1 = D1.find(o => o.id === state.d1), o2 = D2.find(o => o.id === state.d2);
+    stageEl.append(el("div", { class: "status" }, el("span", { class: "chip" }, "Chequered flag"), el("span", { class: "chip" }, "Debrief")),
+      el("h2", {}, `Your race, ${player.name}`),
+      el("dl", { class: "path" },
+        el("div", {}, el("dt", {}, "First call"), el("dd", {}, `${o1.key}. ${o1.title}`)),
+        el("div", {}, el("dt", {}, "Team calls"), el("dd", {}, `${o2.key}. ${o2.title}`)),
+        el("div", {}, el("dt", {}, "World champion"), el("dd", {}, el("div", { class: "champ" }, champName(champ)), summary))),
+      el("p", { class: "note", id: "mail" }, mailText()),
+      el("h3", {}, "What happened in 2021"), ...DATA.history.map(p => el("p", {}, p)),
+      el("h3", {}, "Talk it over"), el("ul", { class: "qs" }, ...DATA.questions.map(q => el("li", {}, q))),
+      el("div", { class: "row" },
+        el("button", { type: "button", onclick: downloadResults }, "Download my results"),
+        el("button", { type: "button", onclick: copyResults }, "Copy results"),
+        el("button", { type: "button", onclick: () => { state = { stage: "welcome", d1: null, d2: null }; mail = { status: "idle" }; render(); } }, "Run it again")),
+      el("p", { class: "note", id: "keep" }));
+  }
+}
+
+const champName = c => c === "Hamilton" ? "Lewis Hamilton" : "Max Verstappen";
+const endingId = () => `${state.d1}_${state.d2}`;
+const mailText = () => ({ idle: "", sending: `Sending your results to ${player.email}…`, sent: `We've emailed your results to ${player.email}.`,
+  failed: mail.message || "We couldn't email your results this time. Use Download or Copy to keep them." })[mail.status];
+function go(stage) {
+  state.stage = stage; render(); window.scrollTo({ top: 0, behavior: "smooth" });
+  if (stage === "debrief") sendResults();
+}
+function choose(s, id) { audio.pause(); if (s === "d1") { state.d1 = id; go("branch"); } else { state.d2 = id; go("ending"); } }
+
+async function sendResults() {
+  mail = { status: "sending" }; const n = () => { const m = $("#mail"); if (m) m.textContent = mailText(); }; n();
+  try {
+    const r = await fetch("/api/finish-run", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: player.token, name: player.name, email: player.email, consent: true, d1: state.d1, d2: state.d2, website: player.hp || "" }) });
+    const body = await r.json().catch(() => ({}));
+    mail = r.ok ? { status: "sent" } : { status: "failed", message: body.message };
+  } catch { mail = { status: "failed" }; }
+  n();
+}
+
+function resultsText() {
+  const [champ, summary] = OUTCOME[endingId()];
+  const o1 = D1.find(o => o.id === state.d1), o2 = D2.find(o => o.id === state.d2);
+  return [`Abu Dhabi 2021 Race Control: ${player.name}'s run (${new Date().toLocaleString()})`, "",
+    `First call: ${o1.key}. ${o1.title}`, `Team calls: ${o2.key}. ${o2.title}`, `World champion: ${champName(champ)}`, summary, "",
+    "What happened in 2021:", ...DATA.history].join("\n");
+}
+function downloadResults() {
+  const a = el("a", { href: URL.createObjectURL(new Blob([resultsText()], { type: "text/plain" })), download: "abu-dhabi-2021-my-run.txt" });
+  document.body.append(a); a.click(); a.remove();
+}
+async function copyResults() {
+  const note = $("#keep");
+  try { await navigator.clipboard.writeText(resultsText()); note.textContent = "Copied."; }
+  catch { note.textContent = "Copying is blocked in this browser. Use Download instead."; }
+}
+
+fetch("sim-data.json").then(r => r.json()).then(d => {
+  DATA = d; D1 = d.firstCall; D2 = d.teamCalls; OUTCOME = d.outcomes; render();
+});
+drawLaps();
+</script>
+</body>
+</html>

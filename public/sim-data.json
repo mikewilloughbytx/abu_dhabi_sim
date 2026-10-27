@@ -1,0 +1,37 @@
+{
+  "firstCall": [
+    { "id": "b1_vsc", "key": "1", "title": "Virtual safety car", "text": "All cars slow to a set pace while marshals clear the scene. Nobody can gain time by pitting." },
+    { "id": "b2_all_unlap", "key": "2", "title": "Safety car, all lapped cars unlap", "text": "Deploy the safety car, then follow the rule as written: every lapped car may overtake to rejoin the lead lap before the restart." },
+    { "id": "b3_no_unlap", "key": "3", "title": "Safety car, no unlapping", "text": "Deploy the safety car and keep the running order exactly as it stands, lapped cars included." },
+    { "id": "b4_five_unlap", "key": "4", "title": "Safety car, only the five cars between the leaders unlap", "text": "Clear the cars between Hamilton and Verstappen, then restart racing as soon as possible." },
+    { "id": "b5_sc_finish", "key": "5", "title": "Safety car to the finish", "text": "Deploy the safety car and let the race end behind it if the track can't be cleared in time." },
+    { "id": "b6_red_flag", "key": "6", "title": "Red flag", "text": "Stop the race, bring all cars to the pit lane, and resume with a standing restart once the barrier is repaired." }
+  ],
+  "teamCalls": [
+    { "id": "A", "key": "A", "title": "Block the calls", "text": "From now on, teams communicate only through official channels. Phillip makes every remaining decision without their input." },
+    { "id": "B", "key": "B", "title": "Keep taking the calls", "text": "Continue the tradition of listening to the team principals as the situation develops." }
+  ],
+  "outcomes": {
+    "b1_vsc_A": ["Hamilton", "The virtual safety car holds, the marshals clear the Williams, and Hamilton races to the flag."],
+    "b1_vsc_B": ["Hamilton", "The calls delay race control. A late safety car means the race finishes behind it, and Red Bull are furious."],
+    "b2_all_unlap_A": ["Verstappen", "Phillip clears every lapped car in a single lap and brings the safety car in early. Verstappen passes on fresh softs."],
+    "b2_all_unlap_B": ["Hamilton", "The calls cost a lap. Phillip follows the full procedure, and the race ends behind the safety car."],
+    "b3_no_unlap_A": ["Verstappen", "Max carves through five lapped cars on the restart, and Hamilton's worn tire gives way on the final lap."],
+    "b3_no_unlap_B": ["Hamilton", "Phillip holds the running order. Max clears the lapped cars on the final lap but runs out of road."],
+    "b4_five_unlap_A": ["Verstappen", "Two laps of racing. Hamilton defends until a slow puncture lets Verstappen through."],
+    "b4_five_unlap_B": ["Verstappen", "Red Bull's lobbying gets a one-lap shootout. Verstappen passes at Turn 5, and Mercedes protest."],
+    "b5_sc_finish_A": ["Hamilton", "The track is cleared fast and every rule is followed, but the title is settled behind the safety car."],
+    "b5_sc_finish_B": ["Hamilton", "The arguments cost race control a lap, and the race ends behind the safety car."],
+    "b6_red_flag_A": ["Hamilton", "A standing restart on equal tires. Three laps of wheel-to-wheel racing, and Hamilton wins by two tenths."],
+    "b6_red_flag_B": ["Verstappen", "First-corner contact, a position handed back after the phone calls, and a crash on the final lap. Max is classified ahead."]
+  },
+  "history": [
+    "The real race director chose option 4. Only the five lapped cars between Hamilton and Verstappen were allowed to unlap, and the safety car came in at the end of lap 57. Team principals were on the radio to race control throughout. Verstappen passed Hamilton on the final lap and won his first title, and the stewards rejected Mercedes' protests.",
+    "The FIA's review in 2022 found the rules had been applied incorrectly through human error. The race director was replaced, team principals lost their direct line to race control, and the unlapping rule was rewritten."
+  ],
+  "questions": [
+    "Which mattered more in your run: the first call, or the decision about the phones?",
+    "Is a title decided behind a safety car a fair result? Who gets to decide what fair means?",
+    "What should a referee do when the people affected by a decision are allowed to lobby for it in real time?"
+  ]
+}

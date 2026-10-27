@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sim Results</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="wrap">
+  <header><span class="eyebrow">Facilitator only</span><h1>Sim Results</h1></header>
+  <section class="card">
+    <form class="signup" id="login">
+      <label class="field" for="pw">Password<input id="pw" type="password" autocomplete="current-password" required></label>
+      <p class="err" id="err" role="alert"></p>
+      <div class="row"><button class="primary" type="submit">Show runs</button><button type="button" id="csv" hidden>Download CSV</button></div>
+    </form>
+    <p class="note" id="count"></p>
+    <div class="log" id="log"></div>
+  </section>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+let rows = [], data = null;
+const label = (list, id) => { const o = (list || []).find(x => x.id === id); return o ? `${o.key}. ${o.title}` : id; };
+fetch("sim-data.json").then(r => r.json()).then(d => data = d);
+$("#login").addEventListener("submit", async e => {
+  e.preventDefault(); $("#err").textContent = "";
+  const r = await fetch("/api/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: $("#pw").value }) });
+  const b = await r.json().catch(() => ({}));
+  if (!r.ok) { $("#err").textContent = b.message || "The runs couldn't be loaded."; return; }
+  rows = b.rows; draw(); $("#csv").hidden = false;
+});
+function draw() {
+  $("#count").textContent = `${rows.length} completed run${rows.length === 1 ? "" : "s"}.`;
+  const t = document.createElement("table");
+  const head = ["When", "Name", "Email", "First call", "Team calls", "Champion", "Email sent"];
+  t.innerHTML = "<tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr>";
+  for (const r of rows) {
+    const tr = t.insertRow();
+    for (const v of [new Date(r.created_at).toLocaleString(), r.name, r.email, label(data?.firstCall, r.first_call), label(data?.teamCalls, r.team_calls), r.champion, r.email_status])
+      tr.insertCell().textContent = v;
+  }
+  $("#log").replaceChildren(t);
+}
+$("#csv").addEventListener("click", () => {
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["created_at", "name", "email", "first_call", "team_calls", "champion", "run_seconds", "email_status"].join(",")]
+    .concat(rows.map(r => [r.created_at, r.name, r.email, label(data?.firstCall, r.first_call), label(data?.teamCalls, r.team_calls), r.champion, r.run_seconds, r.email_status].map(q).join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" })); a.download = "abu-dhabi-sim-runs.csv"; a.click();
+});
+</script>
+</body>
+</html>
